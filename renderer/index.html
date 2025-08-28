@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment Calendar Sync</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>📚 Assignment Calendar Sync</h1>
+                <div class="status-indicator">
+                    <span id="status-dot" class="status-dot ready"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="app-nav">
+            <button id="nav-dashboard" class="nav-btn active">
+                <span class="nav-icon">🏠</span>
+                Dashboard
+            </button>
+            <button id="nav-settings" class="nav-btn">
+                <span class="nav-icon">⚙️</span>
+                Settings
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            
+            <!-- Dashboard Screen -->
+            <div id="dashboard-screen" class="screen active">
+                <div class="dashboard-content">
+                    
+                    <!-- Sync Status Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🔄 Sync Status</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="sync-info">
+                                <div class="sync-stat">
+                                    <label>Last Sync:</label>
+                                    <span id="last-sync">Never</span>
+                                </div>
+                                <div class="sync-stat">
+                                    <label>Events Created:</label>
+                                    <span id="events-created">0</span>
+                                </div>
+                                <div class="sync-stat">
+                                    <label>Events Skipped:</label>
+                                    <span id="events-skipped">0</span>
+                                </div>
+                            </div>
+                            
+                            <div class="sync-actions">
+                                <button id="sync-now-btn" class="btn btn-primary">
+                                    <span class="btn-icon">🔄</span>
+                                    Sync Now
+                                </button>
+                                <button id="dry-run-btn" class="btn btn-secondary">
+                                    <span class="btn-icon">👁️</span>
+                                    Dry Run
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Settings Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>⚡ Quick Settings</h2>
+                        </div>
+                        <div class="card-content">
+                            <div class="quick-settings">
+                                <div class="setting-row">
+                                    <label for="quick-days">Days ahead to sync:</label>
+                                    <select id="quick-days">
+                                        <option value="7">7 days</option>
+                                        <option value="14">14 days</option>
+                                        <option value="30" selected>30 days</option>
+                                        <option value="60">60 days</option>
+                                    </select>
+                                </div>
+                                <div class="setting-row">
+                                    <label>
+                                        <input type="checkbox" id="verbose-mode"> 
+                                        Show detailed output
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📋 Recent Activity</h2>
+                        </div>
+                        <div class="card-content">
+                            <div id="recent-activity" class="activity-list">
+                                <div class="activity-item">
+                                    <span class="activity-icon">ℹ️</span>
+                                    <span class="activity-text">Welcome! Configure your settings to get started.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settings-screen" class="screen">
+                <div class="settings-content">
+                    
+                    <!-- Gradescope Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🎓 Gradescope Login</h2>
+                        </div>
+                        <div class="card-content">
+                            <form id="gradescope-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="gradescope-email">Email:</label>
+                                    <input type="email" id="gradescope-email" placeholder="your.email@university.edu" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gradescope-password">Password:</label>
+                                    <input type="password" id="gradescope-password" placeholder="Your Gradescope password" required>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" id="test-gradescope-btn" class="btn btn-secondary">
+                                        <span class="btn-icon">🔍</span>
+                                        Test Login
+                                    </button>
+                                    <div id="gradescope-status" class="test-status"></div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Google Calendar Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>📅 Google Calendar</h2>
+                        </div>
+                        <div class="card-content">
+                            <form id="calendar-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="google-client-id">Client ID:</label>
+                                    <input type="text" id="google-client-id" placeholder="Google Calendar API Client ID" required>
+                                    <small class="form-help">
+                                        Get this from <a href="#" id="google-console-link">Google Cloud Console</a>
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="google-client-secret">Client Secret:</label>
+                                    <input type="password" id="google-client-secret" placeholder="Google Calendar API Client Secret" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="google-calendar-id">Calendar ID:</label>
+                                    <input type="text" id="google-calendar-id" placeholder="primary" value="primary">
+                                    <small class="form-help">Use 'primary' for your main calendar</small>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" id="test-calendar-btn" class="btn btn-secondary">
+                                        <span class="btn-icon">🔗</span>
+                                        Test Connection
+                                    </button>
+                                    <div id="calendar-status" class="test-status"></div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Sync Settings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>🔧 Sync Settings</h2>
+                        </div>
+                        <div class="card-content">
+                            <form id="sync-form" class="settings-form">
+                                <div class="form-group">
+                                    <label for="sync-days-ahead">Days ahead to sync:</label>
+                                    <input type="number" id="sync-days-ahead" min="1" max="365" value="30">
+                                    <small class="form-help">How many days in advance to sync assignments</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="reminder-minutes">Reminder time (minutes before due):</label>
+                                    <select id="reminder-minutes">
+                                        <option value="15">15 minutes</option>
+                                        <option value="30">30 minutes</option>
+                                        <option value="60" selected>1 hour</option>
+                                        <option value="120">2 hours</option>
+                                        <option value="1440">1 day</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="timezone">Timezone:</label>
+                                    <select id="timezone">
+                                        <option value="America/New_York" selected>Eastern Time</option>
+                                        <option value="America/Chicago">Central Time</option>
+                                        <option value="America/Denver">Mountain Time</option>
+                                        <option value="America/Los_Angeles">Pacific Time</option>
+                                        <option value="Europe/London">London</option>
+                                        <option value="Europe/Paris">Paris</option>
+                                        <option value="Asia/Tokyo">Tokyo</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="debug-mode"> 
+                                        Enable debug mode (detailed logs)
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="settings-actions">
+                                <button id="save-settings-btn" class="btn btn-primary">
+                                    <span class="btn-icon">💾</span>
+                                    Save Settings
+                                </button>
+                                <button id="test-config-btn" class="btn btn-secondary">
+                                    <span class="btn-icon">🧪</span>
+                                    Test Configuration
+                                </button>
+                                <div id="settings-status" class="test-status"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Progress Modal -->
+            <div id="progress-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 id="progress-title">🔄 Syncing Assignments...</h2>
+                        <button id="close-progress-btn" class="btn-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="progress-info">
+                            <div id="progress-status">Initializing...</div>
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                        </div>
+                        <div class="progress-output">
+                            <div id="progress-log" class="log-output"></div>
+                        </div>
+                        <div class="progress-actions">
+                            <button id="cancel-sync-btn" class="btn btn-danger">
+                                <span class="btn-icon">⛔</span>
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <span id="app-version">v1.0.0</span>
+                <span>|</span>
+                <span id="python-status">Python: Not tested</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
