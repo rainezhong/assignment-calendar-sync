@@ -1,14 +1,14 @@
-# Assignment Calendar Sync - Minimal Version
+# Assignment Calendar Sync
 
-A simple Python script that syncs assignments from Gradescope to Google Calendar.
+A Python application that syncs assignments from Gradescope (via web scraping) to Google Calendar, with support for school SSO authentication.
 
 ## Features
 
-- Scrapes assignments from Gradescope using Selenium
-- Creates Google Calendar events for assignments with due dates
-- Avoids duplicate events
-- Configurable reminder times
-- Dry-run mode for testing
+- **Gradescope Scraping**: Supports both direct login and SSO (School Credentials)
+- **Session Persistence**: Saves login sessions to avoid repeated authentication
+- **Google Calendar Sync**: Creates events with smart duplicate detection
+- **Configurable Settings**: Reminder times, sync window, and more
+- **Dry-run Mode**: Preview changes before syncing
 
 ## Setup
 
@@ -36,7 +36,7 @@ cp .env.example .env
 
 Edit `.env` with your information:
 - Google Calendar API credentials
-- Gradescope email and password
+- Gradescope credentials OR enable SSO mode
 - Other optional settings
 
 ### 4. Install ChromeDriver
@@ -51,6 +51,24 @@ brew install chromedriver
 sudo apt-get install chromium-chromedriver
 
 # Or download manually from https://chromedriver.chromium.org/
+```
+
+## Authentication Setup
+
+### Gradescope Options
+
+#### Option 1: SSO (School Credentials)
+Set in `.env`:
+```
+GRADESCOPE_USE_SSO=true
+```
+You'll be prompted to complete login in your browser.
+
+#### Option 2: Direct Login
+Set in `.env`:
+```
+GRADESCOPE_EMAIL=your_email@school.edu
+GRADESCOPE_PASSWORD=your_password
 ```
 
 ## Usage
@@ -82,7 +100,8 @@ python main.py --all
 ## File Structure
 
 - `main.py` - Main entry point and sync logic
-- `scraper.py` - Gradescope web scraper using Selenium
+- `combined_scraper.py` - Gradescope scraper wrapper
+- `scraper.py` - Gradescope web scraper with SSO support
 - `calendar_integration.py` - Google Calendar API integration
 - `config.py` - Configuration management
 - `.env` - Environment variables (create from .env.example)
@@ -90,11 +109,10 @@ python main.py --all
 
 ## How It Works
 
-1. Logs into Gradescope using Selenium
-2. Scrapes all courses and their assignments
-3. Filters assignments by due date (default: next 30 days)
-4. Checks Google Calendar for existing events to avoid duplicates
-5. Creates calendar events for new assignments
+1. **Gradescope**: Uses Selenium with SSO support or direct login
+2. **Session Management**: Saves cookies for faster subsequent runs
+3. **Calendar Sync**: Creates events with smart duplicate detection
+4. **Filtering**: Only syncs assignments within configured time window
 
 ## Troubleshooting
 

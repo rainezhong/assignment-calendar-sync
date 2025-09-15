@@ -7,7 +7,7 @@ Scrapes assignments from Gradescope and syncs them to Google Calendar
 import sys
 import argparse
 from datetime import datetime, timedelta
-from scraper import GradescopeScraper
+from combined_scraper import GradescopeAssignmentFetcher
 from calendar_integration import GoogleCalendarIntegration  
 from date_parser import parse_gradescope_date
 import config
@@ -19,25 +19,23 @@ from utils import (
 
 
 def run_scraper(verbose=False):
-    """Run the Gradescope scraper and get assignments"""
-    logger.info("Starting Gradescope scraper...")
+    """Run the scraper to get assignments from Gradescope"""
+    logger.info("Starting assignment fetcher for Gradescope...")
     
-    scraper = GradescopeScraper()
+    fetcher = GradescopeAssignmentFetcher()
     
     try:
-        # Login to Gradescope
-        scraper.login()
-        
-        # Get all assignments
-        assignments = scraper.get_assignments()
+        # Get all assignments from Gradescope
+        assignments = fetcher.fetch_all_assignments()
         
         logger.info(f"Found {len(assignments)} total assignments")
         
-        return scraper, assignments
+        return fetcher, assignments
         
     except Exception as e:
-        safe_cleanup(scraper.cleanup, "scraper")
-        raise ScrapingError(f"Scraping failed: {e}")
+        if hasattr(fetcher, 'gradescope_scraper') and fetcher.gradescope_scraper:
+            safe_cleanup(fetcher.gradescope_scraper.cleanup, "scraper")
+        raise ScrapingError(f"Assignment fetching failed: {e}")
 
 
 def parse_assignment_dates(assignments, verbose=False):
@@ -246,8 +244,8 @@ def run_workflow(args):
         sys.exit(1)
         
     finally:
-        if scraper:
-            safe_cleanup(scraper.cleanup, "scraper")
+        if scraper and hasattr(scraper, 'gradescope_scraper') and scraper.gradescope_scraper:
+            safe_cleanup(scraper.gradescope_scraper.cleanup, "scraper")
 
 
 def main():

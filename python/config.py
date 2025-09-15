@@ -27,6 +27,7 @@ class Config:
         self._load_google_calendar_settings()
         self._load_gradescope_settings()
         self._load_canvas_settings()
+        self._load_notion_settings()
         self._load_app_settings()
         
         # Check for critical errors
@@ -39,8 +40,8 @@ class Config:
             self._print_config_warnings()
     
     def _load_google_calendar_settings(self):
-        """Load Google Calendar API settings"""
-        # Required settings
+        """Load Google Calendar API settings (OPTIONAL - only for direct calendar integration)"""
+        # Optional settings - only needed if user wants direct Google Calendar integration
         self.GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '').strip()
         self.GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '').strip()
         
@@ -51,19 +52,20 @@ class Config:
         self.TOKEN_FILE = os.getenv('TOKEN_FILE', 'token.json')
         self.CREDENTIALS_FILE = os.getenv('CREDENTIALS_FILE', 'credentials.json')
         
-        # Validation
-        if not self.GOOGLE_CLIENT_ID:
-            self.errors.append(
-                "GOOGLE_CLIENT_ID is missing. "
-                "Please add it to your .env file. "
-                "Get it from https://console.cloud.google.com/"
+        # Google Calendar API is OPTIONAL - we use ICS file generation instead
+        # Only validate if user has provided partial Google credentials
+        if self.GOOGLE_CLIENT_ID and not self.GOOGLE_CLIENT_SECRET:
+            self.warnings.append(
+                "GOOGLE_CLIENT_ID is set but GOOGLE_CLIENT_SECRET is missing. "
+                "Google Calendar integration won't work without both. "
+                "Leave both empty to use ICS file generation instead."
             )
         
-        if not self.GOOGLE_CLIENT_SECRET:
-            self.errors.append(
-                "GOOGLE_CLIENT_SECRET is missing. "
-                "Please add it to your .env file. "
-                "Get it from https://console.cloud.google.com/"
+        if self.GOOGLE_CLIENT_SECRET and not self.GOOGLE_CLIENT_ID:
+            self.warnings.append(
+                "GOOGLE_CLIENT_SECRET is set but GOOGLE_CLIENT_ID is missing. "
+                "Google Calendar integration won't work without both. "
+                "Leave both empty to use ICS file generation instead."
             )
         
         # Validate calendar ID format (basic check)
@@ -75,27 +77,61 @@ class Config:
                     "Use 'primary' for your main calendar or a valid calendar ID."
                 )
     
+    def _load_notion_settings(self):
+        """Load Notion API settings (OPTIONAL - for direct Notion Calendar sync)"""
+        # Optional settings - only needed if user wants direct Notion integration
+        self.NOTION_API_TOKEN = os.getenv('NOTION_API_TOKEN', '').strip()
+        self.NOTION_DATABASE_ID = os.getenv('NOTION_DATABASE_ID', '').strip()
+        
+        # Notion integration is optional - validate only if provided
+        if self.NOTION_API_TOKEN and not self.NOTION_DATABASE_ID:
+            self.warnings.append(
+                "NOTION_API_TOKEN is set but NOTION_DATABASE_ID is missing. "
+                "Notion Calendar integration won't work without both."
+            )
+        
+        if self.NOTION_DATABASE_ID and not self.NOTION_API_TOKEN:
+            self.warnings.append(
+                "NOTION_DATABASE_ID is set but NOTION_API_TOKEN is missing. "
+                "Notion Calendar integration won't work without both."
+            )
+        
+        # Validate database ID format (basic check)
+        if self.NOTION_DATABASE_ID and len(self.NOTION_DATABASE_ID) != 32:
+            self.warnings.append(
+                f"NOTION_DATABASE_ID '{self.NOTION_DATABASE_ID}' doesn't look like a valid database ID. "
+                "It should be a 32-character UUID without dashes."
+            )
+    
     def _load_gradescope_settings(self):
         """Load Gradescope settings"""
         self.GRADESCOPE_EMAIL = os.getenv('GRADESCOPE_EMAIL', '').strip()
         self.GRADESCOPE_PASSWORD = os.getenv('GRADESCOPE_PASSWORD', '').strip()
+        self.GRADESCOPE_USE_SSO = os.getenv('GRADESCOPE_USE_SSO', 'false').lower() in ('true', '1', 'yes', 'on')
         
-        # Validation
-        if not self.GRADESCOPE_EMAIL:
-            self.errors.append(
-                "GRADESCOPE_EMAIL is missing. "
-                "Please add your Gradescope email to the .env file."
-            )
-        elif '@' not in self.GRADESCOPE_EMAIL:
-            self.errors.append(
-                f"GRADESCOPE_EMAIL '{self.GRADESCOPE_EMAIL}' doesn't look like a valid email address."
-            )
-        
-        if not self.GRADESCOPE_PASSWORD:
-            self.errors.append(
-                "GRADESCOPE_PASSWORD is missing. "
-                "Please add your Gradescope password to the .env file."
-            )
+        # Validation - SSO or direct credentials required
+        if self.GRADESCOPE_USE_SSO:
+            # SSO mode - no credentials needed
+            pass
+        else:
+            # Direct login mode - need email and password
+            if not self.GRADESCOPE_EMAIL:
+                self.errors.append(
+                    "GRADESCOPE_EMAIL is missing. "
+                    "Please add your Gradescope email to the .env file, "
+                    "or set GRADESCOPE_USE_SSO=true for SSO login."
+                )
+            elif '@' not in self.GRADESCOPE_EMAIL:
+                self.errors.append(
+                    f"GRADESCOPE_EMAIL '{self.GRADESCOPE_EMAIL}' doesn't look like a valid email address."
+                )
+            
+            if not self.GRADESCOPE_PASSWORD:
+                self.errors.append(
+                    "GRADESCOPE_PASSWORD is missing. "
+                    "Please add your Gradescope password to the .env file, "
+                    "or set GRADESCOPE_USE_SSO=true for SSO login."
+                )
     
     def _load_canvas_settings(self):
         """Load optional Canvas settings"""
@@ -176,6 +212,9 @@ class Config:
         # Timezone setting (optional)
         self.TIMEZONE = os.getenv('TIMEZONE', 'America/New_York')
         
+        # Target semester setting
+        self.TARGET_SEMESTER = os.getenv('TARGET_SEMESTER', 'current')
+        
         # Chrome driver path (optional)
         self.CHROMEDRIVER_PATH = os.getenv('CHROMEDRIVER_PATH', '').strip() or None
         
@@ -224,13 +263,21 @@ class Config:
         print(f"  Calendar ID: {self.GOOGLE_CALENDAR_ID}")
         
         print("\nGradescope:")
-        print(f"  Email: {self.GRADESCOPE_EMAIL or 'Not set'}")
-        print(f"  Password: {'✓ Set' if self.GRADESCOPE_PASSWORD else '✗ Missing'}")
+        if self.GRADESCOPE_USE_SSO:
+            print("  Authentication: SSO (School Credentials)")
+        else:
+            print(f"  Email: {self.GRADESCOPE_EMAIL or 'Not set'}")
+            print(f"  Password: {'✓ Set' if self.GRADESCOPE_PASSWORD else '✗ Missing'}")
         
         if self.CANVAS_API_TOKEN:
             print("\nCanvas:")
             print(f"  API URL: {self.CANVAS_API_URL}")
             print(f"  API Token: {'✓ Set' if self.CANVAS_API_TOKEN else '✗ Missing'}")
+        
+        if self.NOTION_API_TOKEN:
+            print("\nNotion Calendar:")
+            print(f"  API Token: {'✓ Set' if self.NOTION_API_TOKEN else '✗ Missing'}")
+            print(f"  Database ID: {'✓ Set' if self.NOTION_DATABASE_ID else '✗ Missing'}")
         
         print("\nSettings:")
         print(f"  Sync days ahead: {self.SYNC_DAYS_AHEAD}")

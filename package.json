@@ -1,27 +1,27 @@
 {
   "name": "assignment-calendar-sync",
   "version": "1.0.0",
-  "description": "Desktop app to sync assignments from Gradescope to Google Calendar",
+  "description": "Simple desktop app to sync assignments from Canvas and Gradescope to any calendar app",
   "main": "electron/main.js",
   "homepage": "./",
   "author": "Assignment Calendar Sync",
   "license": "MIT",
   "private": true,
   "scripts": {
-    "electron": "electron .",
-    "electron-dev": "ELECTRON_IS_DEV=1 electron .",
+    "start": "electron .",
+    "dev": "ELECTRON_IS_DEV=1 electron .",
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder --mac --win --linux",
     "pack": "electron-builder --dir",
-    "dist": "npm run build",
-    "start": "npm run electron"
+    "dist": "npm run build"
   },
   "build": {
     "appId": "com.assignmentcalendarsync.app",
     "productName": "Assignment Calendar Sync",
+    "copyright": "Copyright © 2024 Assignment Calendar Sync",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -80,7 +80,5 @@
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4"
   },
-  "dependencies": {
-    "electron-store": "^8.1.0"
-  }
+  "dependencies": {}
 }

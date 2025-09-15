@@ -12,6 +12,9 @@ from selenium.common.exceptions import (
 from datetime import datetime
 import time
 import re
+import json
+import os
+from pathlib import Path
 import config
 from date_parser import parse_gradescope_date
 from utils import (
@@ -21,11 +24,13 @@ from utils import (
 
 
 class GradescopeScraper:
-    """Simple scraper to get assignments from Gradescope"""
+    """Scraper to get assignments from Gradescope with SSO support"""
     
     def __init__(self):
         self.driver = None
         self.logged_in = False
+        self.session_file = Path.home() / '.gradescope_session.json'
+        self.use_sso = config.GRADESCOPE_USE_SSO if hasattr(config, 'GRADESCOPE_USE_SSO') else False
     
     @handle_common_errors
     def _setup_driver(self):
@@ -64,15 +69,185 @@ class GradescopeScraper:
             logger.error(f"Unexpected error setting up Chrome driver: {e}")
             raise ScrapingError(f"Failed to start browser: {e}")
     
-    @retry_on_failure(max_attempts=2, delay=3, exceptions=(TimeoutException, WebDriverException))
-    @handle_common_errors
-    def login(self):
-        """Login to Gradescope with error handling"""
+    def save_session(self):
+        """Save browser cookies to file for session persistence"""
+        try:
+            cookies = self.driver.get_cookies()
+            with open(self.session_file, 'w') as f:
+                json.dump(cookies, f)
+            logger.debug(f"Session saved to {self.session_file}")
+            return True
+        except Exception as e:
+            logger.warning(f"Could not save session: {e}")
+            return False
+    
+    def load_session(self) -> bool:
+        """Load saved session cookies if they exist"""
+        if not self.session_file.exists():
+            return False
+        
+        try:
+            # Load cookies
+            with open(self.session_file, 'r') as f:
+                cookies = json.load(f)
+            
+            # Navigate to Gradescope first
+            self.driver.get('https://www.gradescope.com')
+            
+            # Add cookies
+            for cookie in cookies:
+                # Remove expiry field if it exists (can cause issues)
+                if 'expiry' in cookie:
+                    del cookie['expiry']
+                try:
+                    self.driver.add_cookie(cookie)
+                except Exception as e:
+                    logger.debug(f"Could not add cookie: {e}")
+            
+            # Refresh page with cookies
+            self.driver.refresh()
+            time.sleep(2)
+            
+            # Check if we're logged in
+            if self.check_logged_in():
+                logger.success("Restored previous session successfully")
+                self.logged_in = True
+                return True
+            else:
+                logger.info("Saved session expired, need to login again")
+                return False
+                
+        except Exception as e:
+            logger.warning(f"Could not load session: {e}")
+            return False
+    
+    def check_logged_in(self) -> bool:
+        """Check if currently logged into Gradescope"""
+        try:
+            # Check if we're on a logged-in page
+            current_url = self.driver.current_url
+            if 'login' in current_url:
+                return False
+            
+            # Try to find user menu or dashboard elements
+            user_elements = self.driver.find_elements(By.CSS_SELECTOR, 
+                'a[href="/account"], .courseList, .submissionList')
+            return len(user_elements) > 0
+        except:
+            return False
+    
+    def login_with_sso(self):
+        """Handle SSO login with manual user intervention"""
         if not self.driver:
             self._setup_driver()
         
         try:
-            logger.info("Navigating to Gradescope login page...")
+            logger.info("Navigating to Gradescope SSO login...")
+            self.driver.get('https://www.gradescope.com/login')
+            
+            # Wait for page to load
+            wait = WebDriverWait(self.driver, 15)
+            
+            # Look for and click "School Credentials" button
+            logger.info("Looking for School Credentials option...")
+            try:
+                # Try different possible selectors for the SSO button
+                sso_selectors = [
+                    (By.LINK_TEXT, "School Credentials"),
+                    (By.PARTIAL_LINK_TEXT, "School"),
+                    (By.CSS_SELECTOR, "a[href*='/auth/saml']"),
+                    (By.CSS_SELECTOR, "button:contains('School')"),
+                    (By.XPATH, "//a[contains(text(), 'School')]"),
+                ]
+                
+                sso_button = None
+                for by, selector in sso_selectors:
+                    try:
+                        sso_button = wait.until(EC.element_to_be_clickable((by, selector)))
+                        break
+                    except:
+                        continue
+                
+                if sso_button:
+                    logger.info("Found School Credentials button, clicking...")
+                    sso_button.click()
+                else:
+                    logger.warning("Could not find School Credentials button automatically")
+                    
+            except Exception as e:
+                logger.debug(f"SSO button search: {e}")
+            
+            # Auto-wait for login instead of prompting for input
+            print("\n" + "="*60)
+            print("MANUAL SSO LOGIN REQUIRED")
+            print("="*60)
+            print("Please complete the following steps in the browser window:")
+            print("1. If not already there, click 'School Credentials'")
+            print("2. Search for and select your school")  
+            print("3. Complete your school's login process")
+            print("4. Handle any two-factor authentication if required")
+            print("="*60)
+            print("Waiting for you to complete login... (up to 3 minutes)")
+            
+            # Wait up to 3 minutes for login completion
+            max_wait_time = 180  # 3 minutes
+            wait_interval = 5    # Check every 5 seconds
+            waited = 0
+            
+            while waited < max_wait_time:
+                time.sleep(wait_interval)
+                waited += wait_interval
+                
+                if self.check_logged_in():
+                    print(f"✅ Login detected after {waited} seconds!")
+                    break
+                    
+                # Show progress
+                remaining = max_wait_time - waited
+                if remaining % 30 == 0:  # Every 30 seconds
+                    print(f"Still waiting... ({remaining} seconds remaining)")
+            
+            if waited >= max_wait_time:
+                print("⏰ Timeout waiting for login. Please try again.")
+                # Don't raise error immediately, let the check below handle it
+            
+            # Verify login was successful
+            if self.check_logged_in():
+                self.logged_in = True
+                logger.success("SSO login successful!")
+                
+                # Save session for future use
+                self.save_session()
+                
+            else:
+                raise ScrapingError("Login verification failed - please ensure you completed the login process")
+                
+        except ScrapingError:
+            raise
+        except Exception as e:
+            logger.error(f"SSO login error: {e}")
+            raise ScrapingError(f"SSO login failed: {e}")
+    
+    @retry_on_failure(max_attempts=2, delay=3, exceptions=(TimeoutException, WebDriverException))
+    @handle_common_errors
+    def login(self):
+        """Login to Gradescope with SSO or direct credentials"""
+        if not self.driver:
+            self._setup_driver()
+        
+        # Try to load existing session first
+        if self.load_session():
+            return
+        
+        # Check if we should use SSO or direct login
+        if self.use_sso or not config.GRADESCOPE_EMAIL or not config.GRADESCOPE_PASSWORD:
+            logger.info("Using SSO authentication...")
+            self.login_with_sso()
+            return
+        
+        # Original direct login code
+        try:
+            logger.info("Using direct email/password login...")
             self.driver.get('https://www.gradescope.com/login')
             
             # Wait for page to load
@@ -139,6 +314,9 @@ class GradescopeScraper:
             self.logged_in = True
             logger.success("Successfully logged into Gradescope")
             
+            # Save session after successful login
+            self.save_session()
+            
         except ScrapingError:
             raise
         except (TimeoutException, WebDriverException) as e:
@@ -200,9 +378,27 @@ class GradescopeScraper:
                 
                 for row in assignment_rows:
                     try:
-                        # Look for assignment link
-                        assignment_link = row.find_element(By.CSS_SELECTOR, 'a[href*="/assignments/"]')
-                        assignment_name = assignment_link.text.strip()
+                        assignment_name = None
+                        assignment_url = None
+                        
+                        # First try to find assignment link
+                        try:
+                            assignment_link = row.find_element(By.CSS_SELECTOR, 'a[href*="/assignments/"]')
+                            assignment_name = assignment_link.text.strip()
+                            assignment_url = assignment_link.get_attribute('href')
+                        except:
+                            # No assignment link found, look for project/assignment names in text
+                            row_text = row.text.strip()
+                            lines = [line.strip() for line in row_text.split('\n') if line.strip()]
+                            
+                            # Look for common assignment patterns
+                            for line in lines:
+                                if any(keyword in line.lower() for keyword in ['project', 'homework', 'hw', 'lab', 'assignment', 'exam', 'quiz']):
+                                    # Skip status lines
+                                    if line.lower() not in ['no submission', 'submitted', 'graded', 'not graded']:
+                                        assignment_name = line
+                                        assignment_url = ''  # No URL available
+                                        break
                         
                         if not assignment_name:
                             continue
@@ -246,7 +442,7 @@ class GradescopeScraper:
                             'course': course_name,
                             'due_date': due_date,
                             'due_date_text': due_date_text,
-                            'url': assignment_link.get_attribute('href')
+                            'url': assignment_url or ''
                         }
                         
                         assignments.append(assignment)
@@ -271,6 +467,11 @@ class GradescopeScraper:
     def cleanup(self):
         """Close browser and cleanup"""
         logger.debug("Cleaning up scraper resources...")
+        
+        # Save session before closing if logged in
+        if self.logged_in and self.driver:
+            self.save_session()
+        
         safe_cleanup(lambda: self.driver.quit() if self.driver else None, "Chrome driver")
         self.driver = None
         self.logged_in = False
