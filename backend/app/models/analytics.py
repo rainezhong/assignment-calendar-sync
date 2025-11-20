@@ -1,7 +1,7 @@
 """
 Analytics and prediction models for performance tracking.
 """
-from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, Float, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -26,7 +26,7 @@ class PerformanceMetric(Base):
     category = Column(String, nullable=True)  # academic, time_management, stress
 
     # Context
-    metadata = Column(JSON, default=dict)
+    extra_metadata = Column(JSON, default=dict)
     notes = Column(String, nullable=True)
 
     # Timestamp
