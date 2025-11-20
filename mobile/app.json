@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "Assignment Calendar Sync",
+    "slug": "assignment-calendar-sync",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4F46E5"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.assignmentcalendarsync",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "This app needs access to your calendar to sync assignments.",
+        "NSRemindersUsageDescription": "This app needs access to reminders to manage your tasks."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4F46E5"
+      },
+      "package": "com.yourcompany.assignmentcalendarsync",
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4F46E5"
+        }
+      ],
+      "expo-secure-store"
+    ]
+  }
+}

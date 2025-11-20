@@ -1,0 +1,16 @@
+# Ignore desktop app
+desktop-app/
+node_modules/
+
+# Ignore Python scripts (not part of backend)
+python/
+
+# Ignore mobile app
+mobile/
+
+# Ignore web app (will deploy separately)
+web/
+
+# Ignore documentation
+*.md
+!backend/**/*.md
