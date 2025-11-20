@@ -11,11 +11,13 @@ from app.core.config import settings
 from app.models import (
     User,
     Assignment,
-    CalendarEvent,
     Prediction,
     PerformanceMetric,
+    UserProfile,
+    JobListing,
+    JobMatch,
     JobApplication,
-    Resume
+    CoverLetterTemplate
 )
 
 
