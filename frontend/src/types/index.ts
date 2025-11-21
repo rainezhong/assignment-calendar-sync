@@ -110,6 +110,40 @@ export interface JobMatch {
   job: JobListing;
 }
 
+// Canvas types
+export interface CanvasConnectRequest {
+  api_token: string;
+  base_url: string;
+}
+
+export interface CanvasConnectionResponse {
+  status: string;
+  message: string;
+  canvas_user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
+export interface CanvasStatus {
+  connected: boolean;
+  institution_url?: string;
+  last_synced?: string | null;
+  last_sync_status?: string | null;
+  last_error?: string | null;
+  message?: string;
+}
+
+export interface SyncResponse {
+  status: string;
+  message: string;
+  courses_found: number;
+  courses_new: number;
+  assignments_found: number;
+  assignments_new: number;
+}
+
 // API Response types
 export interface ApiError {
   detail: string;
