@@ -44,3 +44,17 @@ async def initialize_database():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database initialization failed: {str(e)}")
+
+
+@router.get("/debug")
+async def debug_info():
+    """
+    Debug endpoint to check configuration.
+    """
+    return {
+        "database_url_set": bool(settings.DATABASE_URL),
+        "secret_key_set": bool(settings.SECRET_KEY),
+        "allowed_origins": settings.ALLOWED_ORIGINS,
+        "debug_mode": settings.DEBUG,
+        "openai_key_set": bool(settings.OPENAI_API_KEY),
+    }
