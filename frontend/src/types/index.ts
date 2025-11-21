@@ -144,6 +144,55 @@ export interface SyncResponse {
   assignments_new: number;
 }
 
+// Gmail types
+export interface GmailAuthResponse {
+  auth_url: string;
+}
+
+export interface GmailStatus {
+  connected: boolean;
+  email?: string;
+  last_synced?: string | null;
+  last_sync_status?: string | null;
+  last_error?: string | null;
+  emails_count?: number;
+}
+
+export interface SyncGmailRequest {
+  days_back?: number;
+  max_results?: number;
+}
+
+export interface SyncGmailResponse {
+  status: string;
+  message: string;
+  emails_found: number;
+  emails_new: number;
+  emails_updated: number;
+}
+
+// Email types
+export interface Email {
+  id: number;
+  user_id: number;
+  gmail_message_id: string;
+  thread_id: string;
+  subject: string;
+  sender: string;
+  recipient: string;
+  body: string;
+  snippet: string;
+  received_at: string;
+  category: string;
+  is_academic: boolean;
+  extracted_dates: string[];
+  extracted_action_items: string[];
+  course_id: number | null;
+  assignment_id: number | null;
+  approved: boolean;
+  created_at: string;
+}
+
 // API Response types
 export interface ApiError {
   detail: string;

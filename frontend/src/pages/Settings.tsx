@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { canvasApi } from '../api/canvas';
+import { gmailApi } from '../api/gmail';
 import type { CanvasConnectRequest } from '../types';
 
 export default function Settings() {
@@ -256,19 +257,176 @@ export default function Settings() {
         )}
       </div>
 
+      {/* Gmail Integration */}
+      <GmailIntegration />
+
       {/* Other Integrations - Coming Soon */}
       <div className="card opacity-60">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Other Integrations</h2>
         <p className="text-sm text-gray-600 mb-4">Coming soon</p>
         <div className="space-y-2">
           <button className="btn-secondary w-full" disabled>
-            Connect Gmail (Coming Soon)
-          </button>
-          <button className="btn-secondary w-full" disabled>
             Connect Gradescope (Coming Soon)
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Gmail Integration Component
+function GmailIntegration() {
+  const queryClient = useQueryClient();
+
+  const { data: gmailStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['gmail-status'],
+    queryFn: gmailApi.getStatus,
+  });
+
+  // Sync mutation
+  const syncMutation = useMutation({
+    mutationFn: () => gmailApi.sync({ days_back: 30, max_results: 100 }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['gmail-status'] });
+      alert(`Sync successful!\n\nEmails: ${data.emails_found} (${data.emails_new} new, ${data.emails_updated} updated)`);
+    },
+    onError: (err: any) => {
+      alert(`Sync failed: ${err.response?.data?.detail || 'Unknown error'}`);
+    },
+  });
+
+  // Disconnect mutation
+  const disconnectMutation = useMutation({
+    mutationFn: gmailApi.disconnect,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gmail-status'] });
+    },
+  });
+
+  const handleConnect = async () => {
+    try {
+      const { auth_url } = await gmailApi.getAuthUrl();
+      // Open OAuth URL in current window
+      window.location.href = auth_url;
+    } catch (err: any) {
+      alert(`Failed to connect Gmail: ${err.response?.data?.detail || 'Unknown error'}`);
+    }
+  };
+
+  const handleDisconnect = () => {
+    if (confirm('Are you sure you want to disconnect your Gmail account?')) {
+      disconnectMutation.mutate();
+    }
+  };
+
+  const handleSync = () => {
+    if (confirm('Start syncing emails from Gmail?')) {
+      syncMutation.mutate();
+    }
+  };
+
+  return (
+    <div className="card mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Gmail</h2>
+          <p className="text-sm text-gray-600">Connect Gmail to sync assignment-related emails</p>
+        </div>
+        {statusLoading ? (
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        ) : gmailStatus?.connected ? (
+          <CheckCircle2 className="w-5 h-5 text-green-500" />
+        ) : (
+          <XCircle className="w-5 h-5 text-gray-400" />
+        )}
+      </div>
+
+      {gmailStatus?.connected ? (
+        <div className="space-y-4">
+          {/* Connection Info */}
+          <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="flex items-start">
+              <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-green-800">Connected to Gmail</p>
+                {gmailStatus.email && (
+                  <p className="text-sm text-green-700 mt-1 break-all">
+                    {gmailStatus.email}
+                  </p>
+                )}
+                {gmailStatus.last_synced && (
+                  <p className="text-xs text-green-600 mt-2">
+                    Last synced: {new Date(gmailStatus.last_synced).toLocaleString()}
+                  </p>
+                )}
+                {gmailStatus.emails_count !== undefined && (
+                  <p className="text-xs text-green-600 mt-1">
+                    {gmailStatus.emails_count} emails synced
+                  </p>
+                )}
+                {gmailStatus.last_sync_status === 'failed' && gmailStatus.last_error && (
+                  <div className="mt-2 text-xs text-red-600">
+                    Last sync error: {gmailStatus.last_error}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncMutation.isPending}
+              className="btn-primary flex items-center"
+            >
+              {syncMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Sync Now
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnectMutation.isPending}
+              className="btn-secondary text-red-600 hover:bg-red-50"
+            >
+              {disconnectMutation.isPending ? 'Disconnecting...' : 'Disconnect'}
+            </button>
+          </div>
+
+          {/* Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-1">What gets synced:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Emails with keywords: assignment, homework, due, deadline, exam, quiz</li>
+                  <li>Only academic emails from .edu domains and learning platforms</li>
+                  <li>Emails from the last 30 days</li>
+                  <li>Maximum 100 emails per sync</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <button onClick={handleConnect} className="btn-primary">
+            Connect Gmail
+          </button>
+          <p className="text-xs text-gray-500 mt-2">
+            We'll only access emails related to assignments and coursework
+          </p>
+        </div>
+      )}
     </div>
   );
 }
