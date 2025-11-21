@@ -2,7 +2,7 @@
 API v1 routes.
 """
 from fastapi import APIRouter
-from app.api.v1 import auth, assignments, intelligence, analytics, predictions, career, admin
+from app.api.v1 import auth, assignments, intelligence, analytics, predictions, career, admin, canvas
 
 api_router = APIRouter()
 
@@ -13,4 +13,5 @@ api_router.include_router(intelligence.router, prefix="/intelligence", tags=["in
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
 api_router.include_router(career.router, prefix="/career", tags=["career"])
+api_router.include_router(canvas.router, prefix="/canvas", tags=["canvas"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
