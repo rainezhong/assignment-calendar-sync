@@ -40,5 +40,11 @@ class User(Base):
     predictions = relationship("Prediction", back_populates="user", cascade="all, delete-orphan")
     career_profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
+    # New relationships for integrations
+    courses = relationship("Course", back_populates="user", cascade="all, delete-orphan")
+    credentials = relationship("Credential", back_populates="user", cascade="all, delete-orphan")
+    emails = relationship("Email", back_populates="user", cascade="all, delete-orphan")
+    scrape_jobs = relationship("ScrapeJob", back_populates="user", cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<User {self.email}>"

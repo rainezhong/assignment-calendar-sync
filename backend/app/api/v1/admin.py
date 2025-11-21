@@ -16,7 +16,11 @@ from app.models import (
     JobListing,
     JobMatch,
     JobApplication,
-    CoverLetterTemplate
+    CoverLetterTemplate,
+    Course,
+    Credential,
+    Email,
+    ScrapeJob
 )
 
 router = APIRouter()

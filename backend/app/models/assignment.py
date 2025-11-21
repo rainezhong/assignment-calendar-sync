@@ -16,11 +16,12 @@ class Assignment(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    course_id = Column(Integer, ForeignKey("courses.id"), nullable=True, index=True)  # Link to Course table
 
     # Basic info
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    course_name = Column(String, nullable=False, index=True)
+    course_name = Column(String, nullable=False, index=True)  # Kept for backward compatibility
     assignment_type = Column(String, nullable=False)  # essay, project, exam, etc.
 
     # Dates
@@ -52,8 +53,26 @@ class Assignment(Base):
     calendar_event_id = Column(String, nullable=True)
     email_thread_id = Column(String, nullable=True)
 
+    # Integration tracking (for web scraping)
+    source = Column(String, nullable=False, default="manual", index=True)  # "canvas", "gradescope", "gmail", "manual"
+    source_id = Column(String, nullable=True, index=True)  # External ID in source system
+    source_url = Column(String, nullable=True)  # Link to assignment in source system
+
+    # Approval workflow
+    approved = Column(Boolean, default=True, index=True)  # Manual entries auto-approved, scraped need approval
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Grading (from Canvas/Gradescope)
+    points_possible = Column(Float, nullable=True)
+    points_earned = Column(Float, nullable=True)
+    grade_percentage = Column(Float, nullable=True)
+    submission_status = Column(String, nullable=True)  # "submitted", "graded", "late", "missing", "not_submitted"
+    submission_url = Column(String, nullable=True)
+    graded_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     user = relationship("User", back_populates="assignments")
+    course = relationship("Course", back_populates="assignments")
 
     def __repr__(self):
         return f"<Assignment {self.title} - {self.course_name}>"
