@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { canvasApi } from '../api/canvas';
 import { gmailApi } from '../api/gmail';
-import type { CanvasConnectRequest } from '../types';
+import { gradescopeApi } from '../api/gradescope';
+import type { CanvasConnectRequest, GradescopeConnectRequest } from '../types';
 
 export default function Settings() {
   const queryClient = useQueryClient();
@@ -260,16 +261,8 @@ export default function Settings() {
       {/* Gmail Integration */}
       <GmailIntegration />
 
-      {/* Other Integrations - Coming Soon */}
-      <div className="card opacity-60">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Other Integrations</h2>
-        <p className="text-sm text-gray-600 mb-4">Coming soon</p>
-        <div className="space-y-2">
-          <button className="btn-secondary w-full" disabled>
-            Connect Gradescope (Coming Soon)
-          </button>
-        </div>
-      </div>
+      {/* Gradescope Integration */}
+      <GradescopeIntegration />
     </div>
   );
 }
@@ -425,6 +418,254 @@ function GmailIntegration() {
           <p className="text-xs text-gray-500 mt-2">
             We'll only access emails related to assignments and coursework
           </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Gradescope Integration Component
+function GradescopeIntegration() {
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const { data: gradescopeStatus, isLoading: statusLoading } = useQuery({
+    queryKey: ['gradescope-status'],
+    queryFn: gradescopeApi.getStatus,
+  });
+
+  // Connect mutation
+  const connectMutation = useMutation({
+    mutationFn: (data: GradescopeConnectRequest) => gradescopeApi.connect(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gradescope-status'] });
+      setShowForm(false);
+      setEmail('');
+      setPassword('');
+      setError('');
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.detail || 'Failed to connect Gradescope account');
+    },
+  });
+
+  // Sync mutation
+  const syncMutation = useMutation({
+    mutationFn: () => gradescopeApi.sync(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['gradescope-status'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      alert(`Sync successful!\n\nCourses: ${data.courses_found} (${data.courses_new} new)\nAssignments: ${data.assignments_found} (${data.assignments_new} new)`);
+    },
+    onError: (err: any) => {
+      alert(`Sync failed: ${err.response?.data?.detail || 'Unknown error'}`);
+    },
+  });
+
+  // Disconnect mutation
+  const disconnectMutation = useMutation({
+    mutationFn: gradescopeApi.disconnect,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gradescope-status'] });
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+    },
+  });
+
+  const handleConnect = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    connectMutation.mutate({ email, password });
+  };
+
+  const handleDisconnect = () => {
+    if (confirm('Are you sure you want to disconnect your Gradescope account?')) {
+      disconnectMutation.mutate();
+    }
+  };
+
+  const handleSync = () => {
+    if (confirm('Start syncing courses and assignments from Gradescope? This may take a minute.')) {
+      syncMutation.mutate();
+    }
+  };
+
+  return (
+    <div className="card mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Gradescope</h2>
+          <p className="text-sm text-gray-600">Connect Gradescope to sync assignments and grades</p>
+        </div>
+        {statusLoading ? (
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        ) : gradescopeStatus?.connected ? (
+          <CheckCircle2 className="w-5 h-5 text-green-500" />
+        ) : (
+          <XCircle className="w-5 h-5 text-gray-400" />
+        )}
+      </div>
+
+      {gradescopeStatus?.connected ? (
+        <div className="space-y-4">
+          {/* Connection Info */}
+          <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="flex items-start">
+              <CheckCircle2 className="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-green-800">Connected to Gradescope</p>
+                {gradescopeStatus.email && (
+                  <p className="text-sm text-green-700 mt-1 break-all">
+                    {gradescopeStatus.email}
+                  </p>
+                )}
+                {gradescopeStatus.last_synced && (
+                  <p className="text-xs text-green-600 mt-2">
+                    Last synced: {new Date(gradescopeStatus.last_synced).toLocaleString()}
+                  </p>
+                )}
+                {gradescopeStatus.courses_count !== undefined && gradescopeStatus.assignments_count !== undefined && (
+                  <p className="text-xs text-green-600 mt-1">
+                    {gradescopeStatus.courses_count} courses, {gradescopeStatus.assignments_count} assignments
+                  </p>
+                )}
+                {gradescopeStatus.last_sync_status === 'failed' && gradescopeStatus.last_error && (
+                  <div className="mt-2 text-xs text-red-600">
+                    Last sync error: {gradescopeStatus.last_error}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncMutation.isPending}
+              className="btn-primary flex items-center"
+            >
+              {syncMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Sync Now
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnectMutation.isPending}
+              className="btn-secondary text-red-600 hover:bg-red-50"
+            >
+              {disconnectMutation.isPending ? 'Disconnecting...' : 'Disconnect'}
+            </button>
+          </div>
+
+          {/* Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-1">Note about syncing:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Syncing uses web scraping and may take 30-60 seconds</li>
+                  <li>All courses and assignments will be fetched</li>
+                  <li>Review and approve synced items in Assignments page</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          {!showForm ? (
+            <button onClick={() => setShowForm(true)} className="btn-primary">
+              Connect Gradescope
+            </button>
+          ) : (
+            <form onSubmit={handleConnect} className="space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <span className="text-sm text-red-700">{error}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gradescope Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@university.edu"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={connectMutation.isPending}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gradescope Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your Gradescope password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={connectMutation.isPending}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Your password is encrypted and stored securely
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={connectMutation.isPending}
+                  className="btn-primary"
+                >
+                  {connectMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForm(false);
+                    setError('');
+                    setEmail('');
+                    setPassword('');
+                  }}
+                  disabled={connectMutation.isPending}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>

@@ -193,6 +193,36 @@ export interface Email {
   created_at: string;
 }
 
+// Gradescope types
+export interface GradescopeConnectRequest {
+  email: string;
+  password: string;
+}
+
+export interface GradescopeConnectionResponse {
+  status: string;
+  message: string;
+}
+
+export interface GradescopeStatus {
+  connected: boolean;
+  email?: string;
+  last_synced?: string | null;
+  last_sync_status?: string | null;
+  last_error?: string | null;
+  courses_count?: number;
+  assignments_count?: number;
+}
+
+export interface SyncGradescopeResponse {
+  status: string;
+  message: string;
+  courses_found: number;
+  courses_new: number;
+  assignments_found: number;
+  assignments_new: number;
+}
+
 // API Response types
 export interface ApiError {
   detail: string;
