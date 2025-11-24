@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Assignments from './pages/Assignments';
+import Tasks from './pages/Tasks';
 import Jobs from './pages/Jobs';
 import Settings from './pages/Settings';
 
@@ -97,6 +98,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Assignments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <Tasks />
               </ProtectedRoute>
             }
           />

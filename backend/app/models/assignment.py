@@ -70,9 +70,14 @@ class Assignment(Base):
     submission_url = Column(String, nullable=True)
     graded_at = Column(DateTime(timezone=True), nullable=True)
 
+    # Task breakdown tracking
+    tasks_generated = Column(Boolean, default=False)
+    tasks_generated_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     user = relationship("User", back_populates="assignments")
     course = relationship("Course", back_populates="assignments")
+    tasks = relationship("Task", back_populates="assignment", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Assignment {self.title} - {self.course_name}>"

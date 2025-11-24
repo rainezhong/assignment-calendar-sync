@@ -9,6 +9,7 @@ from app.models.course import Course
 from app.models.credential import Credential
 from app.models.email import Email
 from app.models.scrape_job import ScrapeJob
+from app.models.task import Task
 
 __all__ = [
     "User",
@@ -24,4 +25,5 @@ __all__ = [
     "Credential",
     "Email",
     "ScrapeJob",
+    "Task",
 ]

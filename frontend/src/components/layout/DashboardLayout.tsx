@@ -3,6 +3,7 @@ import { useAuthStore } from '../../store/authStore';
 import {
   LayoutDashboard,
   BookOpen,
+  ListTodo,
   Briefcase,
   Settings,
   LogOut,
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Assignments', href: '/assignments', icon: BookOpen },
+    { name: 'Tasks', href: '/tasks', icon: ListTodo },
     { name: 'Jobs', href: '/jobs', icon: Briefcase },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];

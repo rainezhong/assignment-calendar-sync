@@ -45,6 +45,7 @@ class User(Base):
     credentials = relationship("Credential", back_populates="user", cascade="all, delete-orphan")
     emails = relationship("Email", back_populates="user", cascade="all, delete-orphan")
     scrape_jobs = relationship("ScrapeJob", back_populates="user", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User {self.email}>"

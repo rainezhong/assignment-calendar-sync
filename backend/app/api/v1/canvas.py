@@ -15,8 +15,10 @@ from app.models.credential import Credential
 from app.models.course import Course
 from app.models.assignment import Assignment
 from app.models.scrape_job import ScrapeJob
+from app.models.task import Task
 from app.services.canvas_service import CanvasService
 from app.services.encryption_service import encryption_service
+from app.services.task_generation_service import TaskGenerationService
 
 router = APIRouter()
 
@@ -301,6 +303,35 @@ async def sync_canvas(
                     assignments_new += 1
 
         await db.commit()
+
+        # Auto-generate tasks for new assignments
+        if assignments_new > 0:
+            task_service = TaskGenerationService()
+            result = await db.execute(
+                select(Assignment).where(
+                    Assignment.user_id == current_user.id,
+                    Assignment.tasks_generated == False
+                )
+            )
+            assignments_without_tasks = result.scalars().all()
+
+            for assignment in assignments_without_tasks:
+                try:
+                    # Generate tasks
+                    tasks = await task_service.generate_tasks_for_assignment(assignment)
+                    for task in tasks:
+                        db.add(task)
+
+                    # Mark as generated
+                    assignment.tasks_generated = True
+                    assignment.tasks_generated_at = datetime.utcnow()
+
+                except Exception as e:
+                    # Don't fail sync if task generation fails
+                    print(f"Failed to generate tasks for assignment {assignment.id}: {e}")
+                    continue
+
+            await db.commit()
 
         # Update scrape job
         scrape_job.status = "completed"
