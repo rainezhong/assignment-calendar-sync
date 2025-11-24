@@ -223,6 +223,47 @@ export interface SyncGradescopeResponse {
   assignments_new: number;
 }
 
+// Jobs types
+export interface ScrapeJobsRequest {
+  search_url: string;
+  max_jobs?: number;
+}
+
+export interface ScrapeJobsResponse {
+  status: string;
+  message: string;
+  jobs_found: number;
+  jobs_new: number;
+}
+
+export interface JobListingResponse {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  remote_type: string;
+  job_type: string;
+  description?: string;
+  salary_min?: number;
+  salary_max?: number;
+  application_url: string;
+  source: string;
+  posted_date?: string;
+  skills: string[];
+  match_score?: number;
+  matched_skills?: string[];
+}
+
+export interface JobMatchDetailResponse {
+  match_score: number;
+  skill_match_score: number;
+  course_relevance_score: number;
+  recency_score: number;
+  matched_skills: string[];
+  missing_skills: string[];
+  match_reasons: string[];
+}
+
 // API Response types
 export interface ApiError {
   detail: string;
