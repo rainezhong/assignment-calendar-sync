@@ -243,7 +243,9 @@ export default function Jobs() {
                         ? `$${(job.salary_min / 1000).toFixed(0)}K - $${(job.salary_max / 1000).toFixed(0)}K`
                         : job.salary_min
                         ? `$${(job.salary_min / 1000).toFixed(0)}K+`
-                        : `Up to $${(job.salary_max / 1000).toFixed(0)}K`}
+                        : job.salary_max
+                        ? `Up to $${(job.salary_max / 1000).toFixed(0)}K`
+                        : 'Salary Available'}
                     </div>
                     <div className="text-xs text-gray-500">Salary</div>
                   </div>
