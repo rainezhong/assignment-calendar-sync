@@ -2,7 +2,7 @@
 API v1 routes.
 """
 from fastapi import APIRouter
-from app.api.v1 import auth, assignments, intelligence, analytics, predictions, career, admin, canvas, gmail, gradescope
+from app.api.v1 import auth, assignments, intelligence, analytics, predictions, career, admin, canvas, gmail, gradescope, jobs
 
 api_router = APIRouter()
 
@@ -16,4 +16,5 @@ api_router.include_router(career.router, prefix="/career", tags=["career"])
 api_router.include_router(canvas.router, prefix="/canvas", tags=["canvas"])
 api_router.include_router(gmail.router, prefix="/gmail", tags=["gmail"])
 api_router.include_router(gradescope.router, prefix="/gradescope", tags=["gradescope"])
+api_router.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
