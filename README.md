@@ -1,140 +1,225 @@
-# Assignment Calendar Sync
+# Student Hub
 
-A Python application that syncs assignments from Gradescope (via web scraping) to Google Calendar, with support for school SSO authentication.
+A full-stack web application that helps students manage their academic workload by syncing assignments from Canvas and Gradescope, tracking job opportunities from LinkedIn, and automatically breaking down assignments into actionable tasks using AI.
 
 ## Features
 
-- **Gradescope Scraping**: Supports both direct login and SSO (School Credentials)
-- **Session Persistence**: Saves login sessions to avoid repeated authentication
-- **Google Calendar Sync**: Creates events with smart duplicate detection
-- **Configurable Settings**: Reminder times, sync window, and more
-- **Dry-run Mode**: Preview changes before syncing
+### Assignment Management
+- **Canvas Integration**: OAuth sync for courses and assignments
+- **Gradescope Integration**: Web scraping with SSO support
+- **AI Task Breakdown**: Automatically generates 5-8 actionable subtasks for each assignment using Claude AI
+- **Calendar View**: Visual timeline of all upcoming assignments
 
-## Setup
+### Job Tracking
+- **LinkedIn Scraping**: Automated job opportunity discovery
+- **Application Tracking**: Monitor application status and deadlines
+- **Smart Filtering**: Find relevant opportunities based on your profile
 
-### 1. Install Dependencies
+### Smart Organization
+- **Priority-Based Todo Lists**: Tasks ordered by priority and due date
+- **Gmail Integration**: Track important academic emails
+- **Progress Tracking**: Visual completion metrics and analytics
 
+## Tech Stack
+
+### Backend
+- **FastAPI** - Async Python web framework
+- **SQLAlchemy 2.0** - Async ORM with PostgreSQL
+- **Alembic** - Database migrations
+- **Playwright** - Web scraping (Gradescope, LinkedIn)
+- **Anthropic Claude** - AI task generation (Haiku model)
+- **APScheduler** - Background job scheduling
+
+### Frontend
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **TanStack Query** - Server state management
+- **Zustand** - Client state management
+- **Tailwind CSS** - Styling
+- **Vite** - Build tool
+
+## Quick Start
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 14+
+
+### Backend Setup
+
+1. **Install dependencies**:
 ```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Setup Google Calendar API
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Enable Google Calendar API
-4. Create credentials (OAuth 2.0 Client ID)
-5. Download credentials as JSON
-
-### 3. Configure Environment Variables
-
-Copy `.env.example` to `.env` and fill in your credentials:
-
+2. **Configure environment**:
 ```bash
 cp .env.example .env
+# Edit .env with your settings:
+# - DATABASE_URL (PostgreSQL connection)
+# - SECRET_KEY (for JWT tokens)
+# - ANTHROPIC_API_KEY (for AI task generation)
+# - Canvas API credentials
+# - Gmail OAuth credentials
 ```
 
-Edit `.env` with your information:
-- Google Calendar API credentials
-- Gradescope credentials OR enable SSO mode
-- Other optional settings
-
-### 4. Install ChromeDriver
-
-For Selenium to work, you need ChromeDriver:
-
+3. **Initialize database**:
 ```bash
-# Mac
-brew install chromedriver
+# Run migrations
+alembic upgrade head
 
-# Ubuntu/Debian
-sudo apt-get install chromium-chromedriver
-
-# Or download manually from https://chromedriver.chromium.org/
+# Initialize admin account (optional)
+python init_db.py
 ```
 
-## Authentication Setup
-
-### Gradescope Options
-
-#### Option 1: SSO (School Credentials)
-Set in `.env`:
-```
-GRADESCOPE_USE_SSO=true
-```
-You'll be prompted to complete login in your browser.
-
-#### Option 2: Direct Login
-Set in `.env`:
-```
-GRADESCOPE_EMAIL=your_email@school.edu
-GRADESCOPE_PASSWORD=your_password
-```
-
-## Usage
-
-### Basic Sync
-
+4. **Start the server**:
 ```bash
-python main.py
+uvicorn app.main:app --reload
+# API runs at http://localhost:8000
+# API docs at http://localhost:8000/docs
 ```
 
-### Dry Run (Preview what would be synced)
+### Frontend Setup
 
+1. **Install dependencies**:
 ```bash
-python main.py --dry-run
+cd frontend
+npm install
 ```
 
-### Sync More Days Ahead
-
+2. **Configure environment**:
 ```bash
-python main.py --days 60  # Sync assignments due in next 60 days
+# Create .env file
+echo "VITE_API_URL=http://localhost:8000" > .env
 ```
 
-### Sync All Assignments
-
+3. **Start dev server**:
 ```bash
-python main.py --all
+npm run dev
+# App runs at http://localhost:5173
 ```
 
-## File Structure
+## Project Structure
 
-- `main.py` - Main entry point and sync logic
-- `combined_scraper.py` - Gradescope scraper wrapper
-- `scraper.py` - Gradescope web scraper with SSO support
-- `calendar_integration.py` - Google Calendar API integration
-- `config.py` - Configuration management
-- `.env` - Environment variables (create from .env.example)
-- `requirements.txt` - Python dependencies
+```
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/          # API endpoints
+│   │   ├── models/          # SQLAlchemy models
+│   │   ├── services/        # Business logic
+│   │   └── core/            # Auth, config, dependencies
+│   ├── alembic/             # Database migrations
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── api/             # API client functions
+│   │   ├── components/      # React components
+│   │   ├── pages/           # Page components
+│   │   └── store/           # State management
+│   └── package.json
+├── EXERCISES.md             # Learning exercises for developers
+├── LICENSE
+└── README.md
+```
 
-## How It Works
+## Key Endpoints
 
-1. **Gradescope**: Uses Selenium with SSO support or direct login
-2. **Session Management**: Saves cookies for faster subsequent runs
-3. **Calendar Sync**: Creates events with smart duplicate detection
-4. **Filtering**: Only syncs assignments within configured time window
+### Authentication
+- `POST /api/v1/auth/register` - Create account
+- `POST /api/v1/auth/login` - Login
+- `GET /api/v1/auth/me` - Get current user
 
-## Troubleshooting
+### Assignments
+- `GET /api/v1/assignments` - List assignments
+- `POST /api/v1/canvas/sync` - Sync from Canvas
+- `POST /api/v1/gradescope/sync` - Sync from Gradescope
 
-### ChromeDriver Issues
-- Make sure ChromeDriver is installed and in PATH
-- Update ChromeDriver if Chrome browser was recently updated
+### Tasks
+- `GET /api/v1/tasks?status=pending` - Get pending tasks
+- `POST /api/v1/assignments/{id}/generate-tasks` - Generate AI tasks
+- `PATCH /api/v1/tasks/{id}` - Update task
+- `POST /api/v1/tasks/{id}/complete` - Mark complete
 
-### Google Calendar Authentication
-- On first run, a browser window will open for OAuth authentication
-- Grant calendar permissions when prompted
-- Token is saved to `token.json` for future runs
+### Jobs
+- `GET /api/v1/jobs` - List job opportunities
+- `POST /api/v1/jobs/scrape` - Scrape LinkedIn
 
-### Gradescope Login Issues
-- Check credentials in `.env` file
-- Try setting `HEADLESS_BROWSER=false` to see what's happening
+## Environment Variables
 
-## Notes
+### Backend (.env)
+```bash
+# Database
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost/studenthub
 
-- Events are created 1 hour before the due date
-- Default reminder is 60 minutes before the event
-- Only assignments with due dates are synced
-- Duplicate events are automatically skipped
+# Security
+SECRET_KEY=your-secret-key-here
+ENCRYPTION_KEY=your-fernet-key-here
+
+# AI
+ANTHROPIC_API_KEY=your-anthropic-key
+
+# Canvas
+CANVAS_API_URL=https://canvas.instructure.com
+CANVAS_CLIENT_ID=your-client-id
+CANVAS_CLIENT_SECRET=your-client-secret
+
+# Gmail (Optional)
+GMAIL_CLIENT_ID=your-gmail-client-id
+GMAIL_CLIENT_SECRET=your-gmail-client-secret
+```
+
+### Frontend (.env)
+```bash
+VITE_API_URL=http://localhost:8000
+```
+
+## Deployment
+
+### Backend (Railway)
+- Automatically deploys from `main` branch
+- Uses `railway.json` configuration
+- PostgreSQL database auto-provisioned
+
+### Frontend (Vercel)
+- Automatically deploys from `main` branch
+- Uses `frontend/vercel.json` configuration
+- Environment variables set in Vercel dashboard
+
+## Development
+
+### Running Tests
+```bash
+# Backend (when tests exist)
+cd backend
+pytest
+
+# Frontend (when tests exist)
+cd frontend
+npm test
+```
+
+### Database Migrations
+```bash
+# Create new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
+```
+
+## Learning
+
+New to the codebase? Check out **EXERCISES.md** for a comprehensive learning guide with 20+ hands-on exercises covering:
+- Backend architecture (FastAPI, SQLAlchemy, async/await)
+- Frontend patterns (React, TypeScript, TanStack Query)
+- Security and production readiness
+- Testing and deployment
 
 ## License
 
